@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>StealthScribe | AI Writing Twin</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://rsms.me/inter/inter.css');
+        html { font-family: 'Inter', sans-serif; }
+        .spinner {
+            border-top-color: #3498db;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body class="bg-gray-900 text-gray-200 flex flex-col items-center justify-center min-h-screen p-4">
+
+    <div class="w-full max-w-4xl mx-auto">
+        <header class="text-center mb-8">
+            <h1 class="text-4xl md:text-5xl font-bold text-white">
+                <span class="text-indigo-400">StealthScribe</span> GPT
+            </h1>
+            <p class="text-gray-400 mt-2">Your Forensic-Grade AI Writing Twin</p>
+        </header>
+
+        <div id="upload-view">
+            <div class="bg-gray-800 border border-gray-700 rounded-lg p-6 md:p-8 shadow-2xl">
+                <h2 class="text-2xl font-semibold text-white mb-2">Step 1: Create Your Writing Twin</h2>
+                <p class="text-gray-400 mb-6">Paste a substantial sample of your writing below (300+ words recommended). The more you provide, the more accurate your AI Twin will be.</p>
+                
+                <textarea id="corpus-text" class="w-full h-64 bg-gray-900 border border-gray-600 rounded-md p-4 text-gray-300 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition duration-200" placeholder="Paste your authentic writing here... an essay, a report, several emails, etc."></textarea>
+                
+                <div class="mt-6 text-center">
+                    <button id="analyze-btn" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-8 rounded-lg text-lg transition duration-300 transform hover:scale-105 shadow-lg flex items-center justify-center mx-auto w-full md:w-auto">
+                        <span id="analyze-btn-text">Build My AI Twin</span>
+                        <div id="analyze-spinner" class="spinner w-6 h-6 rounded-full border-4 border-t-4 border-gray-200 ml-3 hidden"></div>
+                    </button>
+                    <p id="analysis-status" class="text-gray-500 mt-3 text-sm hidden">Analyzing forensic markers... This may take a moment.</p>
+                </div>
+            </div>
+        </div>
+
+        <div id="generate-view" class="hidden">
+            <div class="bg-gray-800 border border-gray-700 rounded-lg shadow-2xl overflow-hidden">
+                <div class="p-6 md:p-8">
+                    <div class="flex justify-between items-center mb-6">
+                        <h2 class="text-2xl font-semibold text-white">Step 2: Generate with Your Twin</h2>
+                        <button id="reset-btn" class="text-sm text-indigo-400 hover:text-indigo-300">Start Over</button>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                        <div>
+                            <label for="document-type" class="block text-sm font-medium text-gray-400 mb-1">Document Type</label>
+                            <select id="document-type" class="w-full bg-gray-700 border border-gray-600 rounded-md p-2 text-white focus:ring-indigo-500 focus:border-indigo-500">
+                                <option>Academic Essay</option>
+                                <option>Formal Email</option>
+                                <option>Blog Post</option>
+                                <option>Brainstorming Draft</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label for="tone-slider" class="block text-sm font-medium text-gray-400 mb-1">Tone (0: Academic, 5: Personal)</label>
+                            <div class="flex items-center">
+                                <span class="mr-2">0</span>
+                                <input id="tone-slider" type="range" min="0" max="5" value="2" class="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer">
+                                <span class="ml-2">5</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <textarea id="generate-prompt" class="w-full h-24 bg-gray-900 border border-gray-600 rounded-md p-4 text-gray-300 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition duration-200" placeholder="Enter your prompt... e.g., 'Draft an email to my professor asking for an extension on the paper.'"></textarea>
+
+                    <button id="generate-btn" class="mt-4 w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-6 rounded-lg transition duration-300 flex items-center justify-center">
+                        <span id="generate-btn-text">Generate</span>
+                        <div id="generate-spinner" class="spinner w-5 h-5 rounded-full border-4 border-t-4 border-gray-200 ml-3 hidden"></div>
+                    </button>
+                </div>
+                
+                <div id="output-section" class="bg-gray-900 p-6 md:p-8 border-t border-gray-700 hidden">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="text-xl font-semibold">Generated Output</h3>
+                        <div id="aegis-rating" class="text-right">
+                            </div>
+                    </div>
+                    <div id="generated-text" class="w-full h-auto min-h-[150px] bg-gray-800 border border-gray-600 rounded-md p-4 text-gray-300 whitespace-pre-wrap"></div>
+                     <button id="copy-btn" class="mt-4 bg-gray-600 hover:bg-gray-500 text-white font-bold py-2 px-4 rounded-lg transition duration-300 text-sm">
+                        Copy to Clipboard
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+<script>
+    // --- State Management ---
+    // In a real app (like with React), this would be more sophisticated.
+    // For this portfolio piece, a simple object simulates our database.
+    let authorialSignatureModel = null;
+
+    // --- DOM Element References ---
+    const uploadView = document.getElementById('upload-view');
+    const generateView = document.getElementById('generate-view');
+    
+    const corpusText = document.getElementById('corpus-text');
+    const analyzeBtn = document.getElementById('analyze-btn');
+    const analyzeBtnText = document.getElementById('analyze-btn-text');
+    const analyzeSpinner = document.getElementById('analyze-spinner');
+    const analysisStatus = document.getElementById('analysis-status');
+
+    const generatePrompt = document.getElementById('generate-prompt');
+    const toneSlider = document.getElementById('tone-slider');
+    const generateBtn = document.getElementById('generate-btn');
+    const generateBtnText = document.getElementById('generate-btn-text');
+    const generateSpinner = document.getElementById('generate-spinner');
+    
+    const outputSection = document.getElementById('output-section');
+    const aegisRating = document.getElementById('aegis-rating');
+    const generatedText = document.getElementById('generated-text');
+    
+    const resetBtn = document.getElementById('reset-btn');
+    const copyBtn = document.getElementById('copy-btn');
+
+
+    // --- Core Logic Functions ---
+
+    /**
+     * PHASE I: Simulates the analysis of the user's corpus.
+     * In a real app, this would be a fetch() call to the Python back-end.
+     */
+    function analyzeCorpus() {
+        const text = corpusText.value;
+
+        if (text.trim().split(' ').length < 50) {
+            alert("Please provide a longer text sample (at least 50 words) for a more accurate analysis.");
+            return;
+        }
+
+        // --- UI Update: Show Loading State ---
+        analyzeBtn.disabled = true;
+        analyzeBtnText.textContent = 'Analyzing...';
+        analyzeSpinner.classList.remove('hidden');
+        analysisStatus.classList.remove('hidden');
+
+        // Simulate network delay and analysis time
+        setTimeout(() => {
+            // --- (Simplified) Forensic Analysis ---
+            const sentences = text.split(/[.!?]/).filter(s => s.trim().length > 0);
+            const words = text.trim().split(/\s+/);
+            const uniqueWords = new Set(words.map(w => w.toLowerCase()));
+
+            const avgSentenceLength = words.length / sentences.length || 15;
+            const lexicalDiversity = uniqueWords.size / words.length || 0.5;
+
+            // Store the "model". This simulates saving it to a database.
+            authorialSignatureModel = {
+                avgSentenceLength: avgSentenceLength.toFixed(1),
+                lexicalDiversity: lexicalDiversity.toFixed(2),
+            };
+
+            console.log("Authorial Signature Model Created:", authorialSignatureModel);
+
+            // --- UI Update: Transition to next view ---
+            uploadView.classList.add('hidden');
+            generateView.classList.remove('hidden');
+            
+            // Reset button state
+            analyzeBtn.disabled = false;
+            analyzeBtnText.textContent = 'Build My AI Twin';
+            analyzeSpinner.classList.add('hidden');
+            analysisStatus.classList.add('hidden');
+
+        }, 2500); // 2.5 second delay for effect
+    }
+
+    /**
+     * PHASE III: Simulates generating text with the user's twin.
+     * In a real app, this would be a fetch() call to the Python back-end.
+     */
+    function generateWithTwin() {
+        const prompt = generatePrompt.value;
+        const tone = toneSlider.value;
+
+        if (!prompt.trim()) {
+            alert("Please enter a prompt.");
+            return;
+        }
+
+        if (!authorialSignatureModel) {
+            alert("Error: Authorial model not found. Please analyze your corpus first.");
+            return;
+        }
+
+        // --- UI Update: Show Loading State ---
+        generateBtn.disabled = true;
+        generateBtnText.textContent = 'Generating...';
+        generateSpinner.classList.remove('hidden');
+        outputSection.classList.remove('hidden');
+        generatedText.textContent = 'Embodying your unique voice...';
+        aegisRating.innerHTML = '';
+
+        // Simulate network delay and AI generation time
+        setTimeout(() => {
+            // --- Simulate AI Response ---
+            // This logic would live on the Python server. We're faking it here.
+            const toneMap = ["academic", "formal", "professional", "engaging", "conversational", "personal"];
+            
+            const fakeGeneratedContent = `(This is a simulated response based on your prompt: "${prompt}")\n\nAdopting a ${toneMap[tone]} tone, this text is crafted to mirror your unique writing style. The sentence structures are designed to reflect your average sentence length of approximately ${authorialSignatureModel.avgSentenceLength} words. Furthermore, the vocabulary is selected to align with your lexical diversity score of ${authorialSignatureModel.lexicalDiversity}, ensuring the output feels authentic and avoids the typical pitfalls of generic AI-generated content. For example, it attempts to construct arguments and present information in a manner consistent with your provided corpus.`;
+
+            generatedText.textContent = fakeGeneratedContent;
+
+            // --- Simulate Aegis Rating ---
+            // In a real app, we'd call GPTZero/Grammarly APIs here.
+            const score = Math.floor(Math.random() * (100 - 85 + 1) + 85); // Random score between 85-100
+            const color = score >= 90 ? 'text-green-400' : 'text-amber-400';
+            const label = score >= 90 ? 'Undetectable' : 'Likely Human';
+
+            aegisRating.innerHTML = `
+                <span class="font-bold text-lg ${color}">${score}/100</span>
+                <span class="text-sm text-gray-400 block">${label}</span>
+            `;
+
+            // Reset button state
+            generateBtn.disabled = false;
+            generateBtnText.textContent = 'Generate';
+            generateSpinner.classList.add('hidden');
+
+        }, 2000); // 2 second delay for effect
+    }
+    
+    function copyToClipboard() {
+        const textToCopy = generatedText.textContent;
+        // Using document.execCommand for broader compatibility in sandboxed environments
+        const textArea = document.createElement("textarea");
+        textArea.value = textToCopy;
+        document.body.appendChild(textArea);
+        textArea.select();
+        try {
+            document.execCommand('copy');
+            copyBtn.textContent = 'Copied!';
+            setTimeout(() => { copyBtn.textContent = 'Copy to Clipboard'; }, 2000);
+        } catch (err) {
+            console.error('Failed to copy text: ', err);
+            copyBtn.textContent = 'Copy Failed';
+        }
+        document.body.removeChild(textArea);
+    }
+
+    function resetApp() {
+        authorialSignatureModel = null;
+        corpusText.value = '';
+        generatePrompt.value = '';
+        outputSection.classList.add('hidden');
+        generateView.classList.add('hidden');
+        uploadView.classList.remove('hidden');
+    }
+
+    // --- Event Listeners ---
+    analyzeBtn.addEventListener('click', analyzeCorpus);
+    generateBtn.addEventListener('click', generateWithTwin);
+    resetBtn.addEventListener('click', resetApp);
+    copyBtn.addEventListener('click', copyToClipboard);
+
+</script>
+</body>
+</html>
