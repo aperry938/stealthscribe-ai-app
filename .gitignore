@@ -1,0 +1,30 @@
+--- Python Specific ---
+Virtual Environment folder
+This is specific to your machine and can be very large.
+venv/
+.venv/
+
+Python cache files
+pycache/
+*.pyc
+
+Environment variables
+CRITICAL: This file will contain your secret API keys for OpenAI, GPTZero, etc.
+.env
+
+--- Operating System Files ---
+macOS
+.DS_Store
+
+Windows
+Thumbs.db
+
+--- Editor/IDE Specific ---
+VSCode
+.vscode/
+
+JetBrains (PyCharm)
+.idea/
+
+--- Log files ---
+*.log
