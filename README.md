@@ -52,8 +52,6 @@ Navigate to the project directory in your terminal and run the server:
 
 uvicorn main:app --reload
 
-The API will be running at http://127.0.0.1:8000.
-
 Project Structure
 index.html: The main, self-contained front-end application. This is the user-facing part of the project.
 
